@@ -1,0 +1,86 @@
+---
+title: "tlsh"
+author: "Rebecca C. Steorts"
+date: "`r Sys.Date()`"
+output: 
+    rmarkdown::html_vignette:
+        fig_caption: yes
+vignette: >
+  %\VignetteIndexEntry{tlsh}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\usepackage[utf8]{inputenc}
+---
+We present a small example from Steorts, R., Ventura, S., Sadinle, M., and Fienberg, S. (2014). "Blocking Comparisons for Record Linkage." Privacy in Statistical Databases (Lecture Notes in Computer Science 8744), ed. J Domingo-Ferrer, Springer, 252-268, \doi{10.1007/978-3-319-11257-2_20}. We will be using the blink package in R and the RLdata500 data set, which was previously available in the Record Linkage package (but has been deprecated). Here, we illustrate transitive LSH. 
+
+In a record linkage task one wants to remove duplicate 
+entries from multiple databases. However, before performing this task, one needs to perform a means of dimension reduction so that the record linkage task is computationally scalable. 
+ 
+Using the TLSH algorithm, we illustrate an example of using this package using a German dataset comprised of first and last name and full date of birth. 
+
+Our goals include
+
+- Presenting the RLdata500 dataset with summary information.
+- Illustrating how we can format the RLdata500 dataset to work with the klsh
+- Running TLSH on the RLdata500 data set to create blocks
+- Explaining the tuning parameters of TLSH and how to choose these in practice with evaluation metrics.
+- Sample output and visualizations 
+
+## Understanding the RLdata500 dataset
+
+The RLdata500 dataset exists already in the blink package in R. We review this data set for the user. 
+
+The RLdata500 data consists of 500 records with 10 percent duplication. Thus, there are 450 unique individuals. There is full information on each record containing first name, last name, and full date of birth. 
+
+We first load the blink package and load the RLdata500 data set. We also, provide the first few lines of the data. We also remove missing values (they are all missing in this data set). 
+
+```{r, echo=TRUE, message=FALSE, knitr::opts_chunk$set(cache=TRUE)}
+library(blink)
+library(plyr)
+library(tlsh)
+data(RLdata500)
+head(RLdata500)
+data.500 <- RLdata500[-c(2,4)]
+head(data.500)
+```
+
+## TLSH applied to RLdata500
+
+
+
+We now explain how to run TLSH on the RLdata500 data set, piece by piece. 
+
+1. We first must creat a universal set of tokens.
+2. We then number find the number of tokens in the universal set.
+3. Then we must generate a vector of random hash functions.
+4. Next, we must creating an index vector and apply the hash functions to each record
+5. Then we build an edgelist, divide the graph into communities initially, sub-divide the communities more if needed
+6. Finally, we have our blocks.
+7. Then we can compute the dimension reduction and the recall. 
+
+The function that find the blocks is called **block_setup_v2. 
+
+```{r} 
+ blocks <- block_setup_v2(RLdata500, b=22, k=2)
+ summary(blocks)
+```
+
+where b is the number of **buckets** and k is the **shingle size**. 
+
+Observe that the blocks are roughly about the same size, however, this does not have to be the case.  
+
+
+The function that allows us to find the recall is **eval.blocksetup**.
+
+```{r}
+eval.blocksetup(RLdata500, b=26, key=identity.RLdata500)
+```
+
+The function that allows us to find the reduction ratio is **reduction.ratio.from.blocking**.
+
+```{r}
+(rr <- reduction.ratio.from.blocking(blocks)) 
+```
+
+To summarize, we have reduced the entire space by roughly 66 percent and the recall is 0.90, which means we are only splitting records across blocks 10 percent of the time. 
+
+
